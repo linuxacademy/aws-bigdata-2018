@@ -43,7 +43,7 @@ table.meta.client.get_waiter('table_exists').wait(TableName='Movies')
 table = dynamodb.Table('Movies')
 
 i = 0
-with open("/home/linuxacademy/moviedata.json") as json_file:
+with open("/home/cloud_user/moviedata.json") as json_file:
 
     movies = json.load(json_file, parse_float = decimal.Decimal)
     for movie in movies:

@@ -5,7 +5,7 @@
 
   "flows": [
     {
-      "filePattern": "/home/linuxacademy/apache.log*",
+      "filePattern": "/home/cloud_user/apache.log*",
       "deliveryStream": "firehose-1",
       "partitionKeyOption": "RANDOM",
       "initialPosition":"START_OF_FILE",
@@ -17,7 +17,7 @@
             ]
     },
     {
-      "filePattern": "/home/linuxacademy/apache.log*",
+      "filePattern": "/home/cloud_user/apache.log*",
       "kinesisStream": "kinesis-1",
       "partitionKeyOption": "RANDOM",
       "initialPosition":"START_OF_FILE",
