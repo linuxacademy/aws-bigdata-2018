@@ -4,7 +4,7 @@
   "flows": [
     {
       "filePattern": "/home/cloud_user/apache.log*",
-      "deliveryStream": "firehose-1",
+      "deliveryStream": "firehose-2",
       "partitionKeyOption": "RANDOM",
       "initialPosition":"START_OF_FILE",
       "dataProcessingOptions": [
