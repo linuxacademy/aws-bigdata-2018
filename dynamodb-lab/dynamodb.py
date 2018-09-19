@@ -5,7 +5,7 @@ import decimal
 import sys
 from time import sleep
 
-dynamodb = boto3.resource('dynamodb',  region_name='us-east-1', )
+dynamodb = boto3.resource('dynamodb',  region_name='us-east-1')
 
 
 table = dynamodb.create_table(
@@ -32,8 +32,8 @@ table = dynamodb.create_table(
 
    ],
    ProvisionedThroughput={
-       'ReadCapacityUnits': 5,
-       'WriteCapacityUnits': 5
+       'ReadCapacityUnits': 1,
+       'WriteCapacityUnits': 1
    }
 )
 
@@ -43,24 +43,29 @@ table.meta.client.get_waiter('table_exists').wait(TableName='Movies')
 table = dynamodb.Table('Movies')
 
 i = 0
-with open("/home/cloud_user/moviedata.json") as json_file:
+# with open("/home/cloud_user/moviedata.json") as json_file:
+with open("moviedata.json") as json_file:
 
     movies = json.load(json_file, parse_float = decimal.Decimal)
     for movie in movies:
         i = i + 1
         if i == 100:
             sys.exit()
-        year = int(movie['year'])
-        title = movie['title']
-        info = movie['info']
+        year = int(movie['Year'])
+        title = movie['Title']
+        star = movie['Actors'][0]
+        rating = movie['Rating']
+        running_time = movie['running_time_secs']
 
-        print("Adding movie:", year, title)
+        print("Adding movie:", year, title, star, rating, running_time)
 
         table.put_item(
            Item={
                'year': year,
                'title': title,
-               'info': info,
+               'actors': star,
+               'rating': rating,
+               'running_time': running_time
             }
         )
         sleep(.1)
