@@ -1,0 +1,21 @@
+{
+    "Role": {
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "sts:AssumeRole",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "lambda.amazonaws.com"
+                    }
+                }
+            ]
+        },
+        "RoleId": "AROAIUJBT7XE4G5FTFTXE",
+        "CreateDate": "2018-09-21T21:21:56Z",
+        "RoleName": "WooferLambdaRole",
+        "Path": "/service-role/",
+        "Arn": "arn:aws:iam::845161814773:role/service-role/WooferLambdaRole"
+    }
+}

@@ -1,0 +1,20 @@
+{
+  "year": {
+    "N": "2013"
+  },
+  "title": {
+    "S": "Lethal Weapon"
+  },
+  "actor": {
+    "S": "Mel Gibson"
+  },
+  "running_time": {
+    "N": "7293"
+  },
+  "rating": {
+    "N": "10"
+  },
+  "uploaded": {
+    "S": "yes"
+  }
+}
