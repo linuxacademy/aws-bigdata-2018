@@ -1,0 +1,233 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description" : "RedshiftLoadUnloadLab",
+  "Mappings" : {
+    "SubnetConfig" : {
+      "VPC"     : { "CIDR" : "10.0.0.0/16" },
+      "Public"  : { "CIDR" : "10.0.0.0/24" },
+      "Public1"  : { "CIDR" : "10.0.2.0/24" },
+      "Private"  : { "CIDR" : "10.0.1.0/24" }
+    }
+  },
+  "Parameters" : {
+    "InboundTraffic" : {
+      "Description" : "Allow inbound traffic to the cluster from this CIDR range.",
+      "Type" : "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default" : "0.0.0.0/0",
+      "AllowedPattern" : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "PortNumber" : {
+      "Description" : "The port number on which the cluster accepts incoming connections.",
+      "Type" : "Number",
+      "Default" : "5439"
+    }
+  },
+  "Resources" : {
+    "S3Bucket" : {
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {}
+    },
+
+    "RedshiftCluster" : {
+      "Type" : "AWS::Redshift::Cluster",
+      "DependsOn" : "AttachGateway",
+      "Properties" : {
+        "ClusterType" : "single-node",
+        "NumberOfNodes" : 1,
+        "NodeType" : "dc1.large",
+        "DBName" : "dev",
+        "MasterUsername" : "clouduser",
+        "MasterUserPassword" : "Fa%YrN^PqxM",               
+        "ClusterParameterGroupName" : { "Ref" : "RedshiftClusterParameterGroup" },
+        "VpcSecurityGroupIds" : [ { "Ref" : "SecurityGroup" } ],
+        "ClusterSubnetGroupName" : { "Ref" : "RedshiftClusterSubnetGroup" },
+        "PubliclyAccessible" : "true",
+        "Port" : { "Ref" : "PortNumber" },
+        "IamRoles": { "Ref" : "CloudUserAndRedshiftIAMRole"}
+      }
+    },
+    "RedshiftClusterParameterGroup" : {
+      "Type" : "AWS::Redshift::ClusterParameterGroup",
+      "Properties" : {
+        "Description" : "Cluster parameter group",
+        "ParameterGroupFamily" : "redshift-1.0",
+        "Parameters" : [{
+          "ParameterName" : "enable_user_activity_logging",
+          "ParameterValue" : "true"
+        }]
+      }
+    },
+    "RedshiftClusterSubnetGroup" : {
+      "Type" : "AWS::Redshift::ClusterSubnetGroup",
+      "Properties" : {
+        "Description" : "Cluster subnet group",
+        "SubnetIds" : [ { "Ref" : "PublicSubnet" } ]
+      }
+    },
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "CidrBlock" : "10.0.0.0/16"
+      }
+    },
+    "PublicSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "CidrBlock" : "10.0.0.0/24",
+        "VpcId" : { "Ref" : "VPC" }
+      }
+    },
+    "SecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group",
+        "SecurityGroupIngress" : [ 
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : { "Ref" : "PortNumber" },
+          "ToPort" : { "Ref" : "PortNumber" },
+          "CidrIp" : { "Ref": "InboundTraffic" }
+        },
+        { "IpProtocol" : "tcp", "FromPort" : "22",  "ToPort" : "22",  "CidrIp" : "0.0.0.0/0" },
+        { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" },
+        { "IpProtocol" : "tcp", "FromPort" : "8080",  "ToPort" : "8080",  "CidrIp" : "0.0.0.0/0" },
+        { "IpProtocol" : "icmp", "FromPort" : "-1",  "ToPort" : "-1",  "CidrIp" : "0.0.0.0/0" }
+        ],
+        "VpcId" : { "Ref" : "VPC" }
+      }
+    },
+    "myInternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway"
+    },
+    "AttachGateway" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "InternetGatewayId" : { "Ref" : "myInternetGateway" }
+      }
+    },
+    "PublicRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        }
+      }
+    },
+    "PublicRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "DependsOn" : "AttachGateway",
+      "Properties"  : {
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : {
+          "Ref" : "myInternetGateway"
+        }
+      }
+    },
+    "PublicSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnet"
+        },
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        }
+      }
+    },
+    "PublicInstance" : {
+      "Type" : "AWS::EC2::Instance",
+      "DependsOn" : "AttachGateway",
+      "Properties" : {
+        "InstanceType" : "t2.micro",
+        "IamInstanceProfile" : { "Ref" : "NotebookInstanceProfile" },
+        "Tags" : [ {"Key" : "Name", "Value" : "Jupyter"}], 
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "#!/bin/bash\n",
+            "/bin/echo '%password%' | /usr/bin/passwd cloud_user --stdin\n",
+            "sed -i 's/export CLOUDPASS=linuxacademy/export CLOUDPASS='%password%'/g' /home/cloud_user/source/var.sh\n",
+            "echo 'rm -rf /home/cloud_user/source' >> /home/cloud_user/source/jupyter.sh\n",
+            "wget https://raw.githubusercontent.com/linuxacademy/aws-bigdata-2018/master/redshift-lab/moviedata.json -P /home/cloud_user/ \n",
+            "wget https://raw.githubusercontent.com/linuxacademy/aws-bigdata-2018/master/redshift-lab/lalogonavy.png -P /home/cloud_user/ \n",
+            "wget https://raw.githubusercontent.com/linuxacademy/aws-bigdata-2018/master/redshift-lab/s3-redshift-data-migrate.png -P /home/cloud_user/ \n",
+            "wget https://raw.githubusercontent.com/linuxacademy/aws-bigdata-2018/master/redshift-lab/S3RedshiftDataLoadUnload.ipynb -P /home/cloud_user/ \n"
+            ]]}},
+        "ImageId"  : "%ami-60%",
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "SecurityGroup" }],
+           "PrivateIpAddress"    : "10.0.0.120",
+           "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Ref" : "PublicSubnet" }
+        }]
+      }
+    },
+    "NotebookInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "CloudUserAndRedshiftIAMRole" } ]
+      }
+    },
+    "CloudUserAndRedshiftIAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": ["redshift.amazonaws.com", "ec2.amazonaws.com"]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": ["s3:*", "dynamodb:*"],
+                "Resource": ["*"]
+              }
+            ]
+          }
+        }]
+      }
+    }
+  },
+  "Outputs" : {
+    "ClusterEndpoint" : {
+      "Description" : "Cluster endpoint",
+      "Value" : { "Fn::Join" : [ ":", [ { "Fn::GetAtt" : [ "RedshiftCluster", "Endpoint.Address" ] }, { "Fn::GetAtt" : [ "RedshiftCluster", "Endpoint.Port" ] } ] ] }
+    },
+    "ClusterName" : {
+      "Description" : "Name of cluster",
+      "Value" : { "Ref" : "RedshiftCluster" }
+    },
+    "ParameterGroupName" : {
+      "Description" : "Name of parameter group",
+      "Value" : { "Ref" : "RedshiftClusterParameterGroup" }
+    },
+    "RedshiftClusterSubnetGroupName" : {
+      "Description" : "Name of cluster subnet group",
+      "Value" : { "Ref" : "RedshiftClusterSubnetGroup" }
+    },
+    "RedshiftClusterSecurityGroupName" : {
+      "Description" : "Name of cluster security group",
+      "Value" : { "Ref" : "SecurityGroup" }
+    }
+  }
+}
