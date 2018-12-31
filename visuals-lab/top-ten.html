@@ -1,0 +1,58 @@
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+</head>
+
+<body>
+<canvas id="myChart" width="400" height="400"></canvas>
+
+<script type="text/javascript">
+$.get("https://s3.amazonaws.com/BUCKET_NAME/data.json", function(json) {
+    
+    var keys = _.keys(json)
+
+    var colors = [
+        "rgb(54, 162, 235)", 
+        "rgb(75, 192, 192)", 
+        "rgb(255, 159, 64)", 
+        "rgb(153, 102, 255)", 
+        "rgb(255, 205, 86)"
+    ]
+
+    finaldataset = []
+    for (var i = 0; i < keys.length; i++) {
+        finaldataset.push(
+            {
+                label: keys[i], 
+                borderColor: colors[i],
+                backgroundColor: 'transparent',
+                data: _.values(json[keys[i]])
+            }
+        )
+    }
+
+    var ctx = document.getElementById("myChart");
+    var myBarChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017],
+            datasets: finaldataset
+        },
+        options: {
+            scales: {
+                xAxes: [{
+                    ticks: {
+                        autoSkip: false
+                    }
+                }]
+            }
+        }
+    })
+})
+
+</script>
+
+</body>
+</html>
